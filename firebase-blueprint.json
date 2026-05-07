@@ -1,0 +1,50 @@
+{
+  "entities": {
+    "Student": {
+      "title": "Student",
+      "description": "Santri records for the mosque youth programs.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name of the student" },
+        "classType": { "oneOf": [{ "const": "Praremaja" }, { "const": "Remaja" }], "description": "Categories: Praremaja (SMP) or Remaja (SMA+)" },
+        "joinDate": { "type": "string", "format": "date-time", "description": "Date student joined" }
+      },
+      "required": ["name", "classType"]
+    },
+    "AttendanceRecord": {
+      "title": "Attendance Record",
+      "description": "Log of attendance for a specific student on a specific date.",
+      "type": "object",
+      "properties": {
+        "studentId": { "type": "string", "description": "Reference to students collection" },
+        "date": { "type": "string", "format": "date", "description": "Date of attendance" },
+        "status": { "oneOf": [{ "const": "Hadir" }, { "const": "Izin" }, { "const": "Alfa" }], "description": "Attendance status" },
+        "teacherName": { "type": "string", "description": "Name of the teacher who took attendance" },
+        "classType": { "type": "string", "description": "Class category at time of recording" }
+      },
+      "required": ["studentId", "date", "status", "teacherName", "classType"]
+    },
+    "Config": {
+      "title": "Config",
+      "description": "Application settings and configurations.",
+      "type": "object",
+      "properties": {
+        "names": { "type": "array", "items": { "type": "string" }, "description": "List of active teacher names" }
+      }
+    }
+  },
+  "firestore": {
+    "students": {
+      "schema": "Student",
+      "description": "Master list of all santri."
+    },
+    "attendance": {
+      "schema": "AttendanceRecord",
+      "description": "Historical attendance records."
+    },
+    "config": {
+      "schema": "Config",
+      "description": "Global settings like teacher names list."
+    }
+  }
+}

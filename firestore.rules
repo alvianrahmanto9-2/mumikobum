@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Students ---
+    function isValidStudent(data) {
+      return data.keys().hasAll(['name', 'classType']) &&
+             data.keys().size() <= 4 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 200 &&
+             data.classType in ['Praremaja', 'Remaja'];
+    }
+
+    match /students/{studentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidStudent(incoming());
+      allow update: if isSignedIn() && isValidStudent(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'classType', 'joinDate', 'active'])
+      );
+      allow delete: if isSignedIn(); // In a production app, maybe restrict to admin
+    }
+
+    // --- Attendance ---
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['studentId', 'date', 'status', 'teacherName', 'classType']) &&
+             data.keys().size() <= 6 &&
+             data.studentId is string &&
+             data.date is string && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$') &&
+             data.status in ['Hadir', 'Izin', 'Alfa'] &&
+             data.teacherName is string && data.teacherName.size() <= 100 &&
+             data.classType in ['Praremaja', 'Remaja'] &&
+             exists(/databases/$(database)/documents/students/$(data.studentId));
+    }
+
+    match /attendance/{recordId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidAttendance(incoming());
+      allow update: if isSignedIn() && isValidAttendance(incoming()) && (
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'teacherName', 'date'])
+      );
+      allow delete: if isSignedIn();
+    }
+
+    // --- Config ---
+    function isValidConfig(data) {
+      return data.keys().hasAll(['names']) &&
+             data.names is list && data.names.size() <= 50;
+    }
+
+    match /config/teachers {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isValidConfig(incoming());
+    }
+  }
+}
